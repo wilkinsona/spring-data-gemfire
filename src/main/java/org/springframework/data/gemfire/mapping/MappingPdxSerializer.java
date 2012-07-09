@@ -77,7 +77,7 @@ public class MappingPdxSerializer implements PdxSerializer, ApplicationContextAw
 		this.instantiators = new EntityInstantiators(gemfireInstantiators);
 	}
 
-	/* 
+	/*
 	 * (non-Javadoc)
 	 * @see org.springframework.context.ApplicationContextAware#setApplicationContext(org.springframework.context.ApplicationContext)
 	 */
@@ -91,6 +91,8 @@ public class MappingPdxSerializer implements PdxSerializer, ApplicationContextAw
 	 * @see com.gemstone.gemfire.pdx.PdxSerializer#fromData(java.lang.Class, com.gemstone.gemfire.pdx.PdxReader)
 	 */
 	public Object fromData(Class<?> type, final PdxReader reader) {
+
+		// TODO: check for custom serializer (PDX)
 
 		final GemfirePersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
 		EntityInstantiator instantiator = instantiators.getInstantiatorFor(entity);
@@ -111,6 +113,8 @@ public class MappingPdxSerializer implements PdxSerializer, ApplicationContextAw
 					return;
 				}
 
+				// TODO: check for custom serializer (Spring Converter - primitives)
+
 				Object value = reader.readField(persistentProperty.getName());
 
 				try {
@@ -130,15 +134,22 @@ public class MappingPdxSerializer implements PdxSerializer, ApplicationContextAw
 	 */
 	public boolean toData(Object value, final PdxWriter writer) {
 
+		// TODO: check for custom serializer (PDX)
+
 		GemfirePersistentEntity<?> entity = mappingContext.getPersistentEntity(value.getClass());
 		final BeanWrapper<PersistentEntity<Object, ?>, Object> wrapper = BeanWrapper.create(value, conversionService);
 
 		entity.doWithProperties(new PropertyHandler<GemfirePersistentProperty>() {
 			public void doWithPersistentProperty(GemfirePersistentProperty persistentProperty) {
 
+				// TODO: check for custom serializer (Spring Converter)
+
 				try {
-					Object value = wrapper.getProperty(persistentProperty);
-					writer.writeObject(persistentProperty.getName(), value);
+
+					Object propertyValue = wrapper.getProperty(persistentProperty);
+					// TODO: use the following to improve serialization performance
+					// writer.writeField(persistentProperty.getName(), propertyValue, (Class) persistentProperty.getType());
+					writer.writeObject(persistentProperty.getName(), propertyValue);
 				} catch (Exception e) {
 					throw new MappingException("Could not write value for property " + persistentProperty.toString(), e);
 				}

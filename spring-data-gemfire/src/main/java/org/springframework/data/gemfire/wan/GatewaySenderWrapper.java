@@ -6,7 +6,6 @@ import org.springframework.util.Assert;
 
 import com.gemstone.gemfire.cache.util.Gateway;
 import com.gemstone.gemfire.cache.wan.GatewayEventFilter;
-import com.gemstone.gemfire.cache.wan.GatewayEventSubstitutionFilter;
 import com.gemstone.gemfire.cache.wan.GatewaySender;
 import com.gemstone.gemfire.cache.wan.GatewayTransportFilter;
 
@@ -127,10 +126,6 @@ public class GatewaySenderWrapper implements GatewaySender {
         return delegate.getGatewayEventFilters();
     }
 
-	public GatewayEventSubstitutionFilter getGatewayEventSubstitutionFilter() {
-		return delegate.getGatewayEventSubstitutionFilter();
-	}
-
 	@Override
     public List<GatewayTransportFilter> getGatewayTransportFilters() {
         return delegate.getGatewayTransportFilters();
@@ -166,13 +161,11 @@ public class GatewaySenderWrapper implements GatewaySender {
     }
 
 	@Override
-	public int getMaxParallelismForReplicatedRegion() {
-		return delegate.getMaxParallelismForReplicatedRegion();
-	}
-
-	@Override
 	public String toString() {
 		return this.delegate.toString();
 	}
-
+	
+	protected final GatewaySender getDelegate() {
+		return this.delegate;
+	}
 }

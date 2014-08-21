@@ -5,154 +5,197 @@ buildscript {
     dependencies {
         classpath 'org.springframework.build.gradle:docbook-reference-plugin:0.2.4'
         classpath 'org.springframework.build.gradle:spring-io-plugin:0.0.3.RELEASE'
+        classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7'
     }
 }
 
 description = 'Spring Data GemFire'
-group = 'org.springframework.data'
 
-repositories {
-  maven { url "http://repo.spring.io/gemstone-release-cache" }
-  //maven { url "http://nexus.gemstone.com:8081/nexus/content/repositories/snapshots" }
-  maven { url "http://dist.gemstone.com/maven/release"}
-  maven { url "http://repo.spring.io/gemstone-snapshot-cache" }
-  maven { url "http://repo.spring.io/libs-snapshot" }
-  maven { url "http://repo.spring.io/plugins-release"}
-}
-
-apply plugin: "java"
-apply plugin: 'eclipse'
-apply plugin: 'idea'
-apply from: "$rootDir/maven.gradle"
-apply plugin: 'docbook-reference'
-//apply plugin: 'bundlor'
-
-if (project.hasProperty('platformVersion')) {
-    apply plugin: 'spring-io'
+allprojects {
+    group = 'org.springframework.data'
 
     repositories {
-        maven { url "https://repo.spring.io/libs-snapshot" }
+        maven { url "http://repo.spring.io/libs-snapshot" }
     }
 
-    dependencies {
-      springIoVersions "io.spring.platform:platform-versions:${platformVersion}@properties"
-    }
-}
+    apply plugin: 'java'
+    apply plugin: 'propdeps'
 
-[compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:-serial"]
-
-tasks.withType(Test).all {
-    forkEvery = 1
-    systemProperties['gemfire.disableShutdownHook'] = 'true'
-    systemProperties['org.springframework.data.gemfire.test.GemfireTestRunner.nomock'] = System.getProperty('org.springframework.data.gemfire.test.GemfireTestRunner.nomock')
-}
-
-// Common dependencies
-dependencies {
-    // Spring Framework
-    compile("org.springframework:spring-core:$springVersion") {
-      exclude group: "commons-logging", module: "commons-logging"
-    }
-    compile("org.springframework:spring-aop:$springVersion") {
-      exclude group: "commons-logging", module: "commons-logging"
-    }
-    compile("org.springframework:spring-context-support:$springVersion") {
-      exclude group: "commons-logging", module: "commons-logging"
-    }
-    compile("org.springframework:spring-tx:$springVersion") {
-      exclude group: "commons-logging", module: "commons-logging"
-    }
-
-	// Spring Data
-	compile("org.springframework.data:spring-data-commons:${springDataCommonsVersion}") {
-		exclude group: "commons-logging", module: "commons-logging"
-	}
-
-	// GemFire
-	compile("com.gemstone.gemfire:gemfire:$gemfireVersion")
-	runtime("antlr:antlr:$antlrVersion")
-
-	compile "org.aspectj:aspectjweaver:$aspectjVersion"
-    compile "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
-    compile "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
-    compile "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-    compile "org.slf4j:slf4j-api:$slf4jVersion"
-    compile "org.slf4j:jcl-over-slf4j:$slf4jVersion"
-
-    // Testing
-    testCompile("org.springframework:spring-test:$springVersion") {
-      exclude group: "commons-logging", module: "commons-logging"
-    }
-    testCompile "junit:junit:$junitVersion"
-    testCompile "org.hamcrest:hamcrest-core:$hamcrestVersion"
-    testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
-    testCompile "org.mockito:mockito-core:$mockitoVersion"
-
-    testCompile "javax.annotation:jsr250-api:1.0", optional
-	testRuntime "log4j:log4j:$log4jVersion"
-	testCompile "org.apache.derby:derbyLocale_zh_TW:10.9.1.0"
-	testRuntime "org.slf4j:slf4j-log4j12:$slf4jVersion"
-}
-
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
-
-javadoc {
-  ext.srcDir = file("${projectDir}/docs/src/api")
-  destinationDir = file("${buildDir}/api")
-  ext.tmpDir = file("${buildDir}/api-work")
-
-  configure(options) {
-      stylesheetFile = file("${srcDir}/spring-javadoc.css")
-      overview = "${srcDir}/overview.html"
-      docFilesSubDirs = true
-      outputLevel = org.gradle.external.javadoc.JavadocOutputLevel.QUIET
-      breakIterator = true
-      showFromProtected()
-      groups = [
-        'Spring GemFire' : ['org.springframework.data.gemfire*'],
-      ]
-  
-     links = [
+    ext.javadocLinks = [
         "http://static.springframework.org/spring/docs/3.1.x/javadoc-api",
         "http://download.oracle.com/javase/6/docs/api",
         "http://www.gemstone.com/docs/6.5.1/product/docs/japi/",
         "http://asm.objectweb.org/asm223/javadoc/user",
         "http://logging.apache.org/log4j/docs/api/",
         "http://atinject.googlecode.com/svn/trunk/javadoc/"
-     ]
-     
-     exclude "org/springframework/data/gemfire/config/**"
-  }
-    
-  title = "${rootProject.description} ${version} API"
+    ] as String[]
 }
 
-jar {
-    manifest.attributes['Implementation-Title'] = 'spring-data-gemfire'
-    manifest.attributes['Implementation-Version'] = project.version
+subprojects {
 
-    from("$rootDir/docs/src/info") {
-        include "license.txt"
-        include "notice.txt"
-        into "META-INF"
-        expand(copyright: new Date().format('yyyy'), version: project.version)
+    apply from: "$rootDir/maven.gradle"
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+    apply plugin: 'merge'
+
+    if (project.hasProperty('platformVersion')) {
+        apply plugin: 'spring-io'
+
+        dependencies {
+          springIoVersions "io.spring.platform:platform-versions:${platformVersion}@properties"
+        }
+    }
+
+    sourceCompatibility = 1.6
+    targetCompatibility = 1.6
+
+    [compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:-serial"]
+
+    tasks.withType(Test).all {
+        forkEvery = 1
+        systemProperties['gemfire.disableShutdownHook'] = 'true'
+        systemProperties['org.springframework.data.gemfire.test.GemfireTestRunner.nomock'] = System.getProperty('org.springframework.data.gemfire.test.GemfireTestRunner.nomock')
+    }
+
+    // Common dependencies
+    dependencies {
+        // Spring Framework
+        compile("org.springframework:spring-core:$springVersion") {
+          exclude group: "commons-logging", module: "commons-logging"
+        }
+        compile("org.springframework:spring-aop:$springVersion") {
+          exclude group: "commons-logging", module: "commons-logging"
+        }
+        compile("org.springframework:spring-context-support:$springVersion") {
+          exclude group: "commons-logging", module: "commons-logging"
+        }
+        compile("org.springframework:spring-tx:$springVersion") {
+          exclude group: "commons-logging", module: "commons-logging"
+        }
+
+        // Spring Data
+        compile("org.springframework.data:spring-data-commons:${springDataCommonsVersion}") {
+            exclude group: "commons-logging", module: "commons-logging"
+        }
+
+        runtime("antlr:antlr:$antlrVersion")
+
+        compile "org.aspectj:aspectjweaver:$aspectjVersion"
+        compile "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
+        compile "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
+        compile "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+        compile "org.slf4j:slf4j-api:$slf4jVersion"
+        compile "org.slf4j:jcl-over-slf4j:$slf4jVersion"
+
+        // Testing
+        testCompile("org.springframework:spring-test:$springVersion") {
+          exclude group: "commons-logging", module: "commons-logging"
+        }
+        testCompile "junit:junit:$junitVersion"
+        testCompile "org.hamcrest:hamcrest-core:$hamcrestVersion"
+        testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
+        testCompile "org.mockito:mockito-core:$mockitoVersion"
+
+        testCompile "javax.annotation:jsr250-api:1.0", optional
+        testRuntime "log4j:log4j:$log4jVersion"
+        testCompile "org.apache.derby:derbyLocale_zh_TW:10.9.1.0"
+        testRuntime "org.slf4j:slf4j-log4j12:$slf4jVersion"
+    }
+
+    javadoc {
+        description = "Generates project-level javadoc for use in -javadoc jar"
+
+        options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
+        options.author = true
+        options.header = project.name
+        options.links(project.ext.javadocLinks)
+        options.addStringOption('Xdoclint:none', '-quiet')
+
+        // suppress warnings due to cross-module @see and @link references;
+        // note that global 'api' task does display all warnings.
+        logging.captureStandardError LogLevel.INFO
+        logging.captureStandardOutput LogLevel.INFO // suppress "## warnings" message
+    }
+
+    jar {
+        manifest.attributes['Implementation-Title'] = 'spring-data-gemfire'
+        manifest.attributes['Implementation-Version'] = project.version
+
+        from("$rootDir/docs/src/info") {
+            include "license.txt"
+            include "notice.txt"
+            into "META-INF"
+            expand(copyright: new Date().format('yyyy'), version: project.version)
+        }
+    }
+
+
+    task sourcesJar(type: Jar, dependsOn:classes) {
+        classifier = 'sources'
+        from sourceSets.main.allJava
+    }
+
+    task javadocJar(type: Jar) {
+        classifier = 'javadoc'
+        from javadoc
+    }
+
+    artifacts {
+        archives sourcesJar
+        archives javadocJar
     }
 }
 
-
-task sourcesJar(type: Jar, dependsOn:classes) {
-    classifier = 'sources'
-    from sourceSets.main.allJava
+project("spring-data-gemfire") {
+    dependencies {
+        compile("com.gemstone.gemfire:gemfire:$gemfire7Version")
+    }
 }
 
-task javadocJar(type: Jar) {
-    classifier = 'javadoc'
-    from javadoc
+project("spring-data-gemfire8") {
+    merge.into = project(":spring-data-gemfire")
+
+    dependencies {
+        compile("com.gemstone.gemfire:gemfire:$gemfire8Version")
+    }
 }
+
+apply plugin: 'docbook-reference'
 
 reference {
     sourceDir = file('docs/src/reference/docbook')
+}
+
+task api(type: Javadoc) {
+    group = 'Documentation'
+    description = 'Generates aggregated Javadoc API documentation.'
+    title = "${rootProject.description} ${version} API"
+
+    configure(options) {
+        stylesheetFile = file('docs/src/api/spring-javadoc.css')
+        overview = file('docs/src/api/overview.html')
+        docFilesSubDirs = true
+        outputLevel = org.gradle.external.javadoc.JavadocOutputLevel.QUIET
+        breakIterator = true
+        showFromProtected()
+        groups = [
+          'Spring GemFire' : ['org.springframework.data.gemfire*'],
+        ]
+
+        links = project.ext.javadocLinks
+
+        exclude "org/springframework/data/gemfire/config/**"
+    }
+
+    source subprojects.collect { project ->
+        project.sourceSets.main.allJava
+    }
+
+    destinationDir = new File(buildDir, "api")
+
+    classpath = files(subprojects.collect { project ->
+        project.sourceSets.main.compileClasspath
+    })
 }
 
 task docsZip(type: Zip) {
@@ -164,7 +207,7 @@ task docsZip(type: Zip) {
         include 'changelog.txt'
     }
 
-    from (javadoc) {
+    from (api) {
         into 'api'
     }
 
@@ -178,29 +221,31 @@ task schemaZip(type: Zip) {
     classifier = 'schema'
     description = "Builds -${classifier} archive containing all XSDs for deployment"
 
-    def Properties schemas = new Properties();
-    
-    sourceSets.main.resources.find {
-        it.path.endsWith('META-INF' + File.separator + 'spring.schemas')
-    }?.withInputStream { schemas.load(it) }
+    subprojects.each { subproject ->
+        Properties schemas = new Properties();
 
-    for (def key : schemas.keySet()) {
-        def shortName = key.replaceAll(/http.*schema.(.*).spring-.*/, '$1')
-        def alias = key.replaceAll(/http.*schema.(.*).(spring-.*)/, '$2')
-        assert shortName != key
-        File xsdFile = sourceSets.main.resources.find {
-            it.path.replace('\\', '/').endsWith(schemas.get(key))
-        }
-        assert xsdFile != null
-        
-        into (shortName) {
-           from xsdFile.path
-           rename { String fileName -> alias }
+        subproject.sourceSets.main.resources.find {
+            it.path.endsWith('META-INF' + File.separator + 'spring.schemas')
+        }?.withInputStream { schemas.load(it) }
+
+        for (def key : schemas.keySet()) {
+            def shortName = key.replaceAll(/http.*schema.(.*).spring-.*/, '$1')
+            def alias = key.replaceAll(/http.*schema.(.*).(spring-.*)/, '$2')
+            assert shortName != key
+            File xsdFile = subproject.sourceSets.main.resources.find {
+                it.path.replace('\\', '/').endsWith(schemas.get(key))
+            }
+            assert xsdFile != null
+
+            into (shortName) {
+               from xsdFile.path
+               rename { String fileName -> alias }
+            }
         }
     }
 }
 
-task distZip(type: Zip, dependsOn: [jar, docsZip, schemaZip, sourcesJar, javadocJar]) {
+task distZip(type: Zip, dependsOn: [docsZip, schemaZip]) {
     group = 'Distribution'
     classifier = 'dist'
     description = "Builds -${classifier} archive, containing all jars and docs, " +
@@ -215,7 +260,7 @@ task distZip(type: Zip, dependsOn: [jar, docsZip, schemaZip, sourcesJar, javadoc
             include 'notice.txt'
             expand(copyright: new Date().format('yyyy'), version: project.version)
         }
-        
+
         from('samples/') {
             into 'samples'
             exclude '**/build/**'
@@ -224,7 +269,7 @@ task distZip(type: Zip, dependsOn: [jar, docsZip, schemaZip, sourcesJar, javadoc
             exclude '**/vf*.*'
             exclude '**/vf*.txt'
         }
-        
+
         from(zipTree(docsZip.archivePath)) {
             into "docs"
         }
@@ -232,16 +277,23 @@ task distZip(type: Zip, dependsOn: [jar, docsZip, schemaZip, sourcesJar, javadoc
         from(zipTree(schemaZip.archivePath)) {
             into "schema"
         }
-        into ("dist") {
+    }
+
+    subprojects.each { subproject ->
+        into ("$zipRootDir/dist") {
+        from subproject.jar
+        if (subproject.tasks.findByPath("sourcesJar")) {
+            from subproject.sourcesJar
+        }
+        if (subproject.tasks.findByPath("javadocJar")) {
+            from subproject.javadocJar
+        }
             from rootProject.collect { project -> project.libsDir }
         }
     }
 }
 
 artifacts {
-    archives sourcesJar
-    archives javadocJar
-
     archives docsZip
     archives schemaZip
     archives distZip
@@ -262,7 +314,3 @@ task wrapper(type: Wrapper) {
                                                       "set GRADLE_OPTS=$gradleBatOpts %GRADLE_OPTS%\nset DEFAULT_JVM_OPTS=")
   }
 }
-
-assemble.dependsOn = ['jar', 'sourcesJar']
-defaultTasks 'build'
-

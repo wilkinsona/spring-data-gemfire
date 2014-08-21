@@ -19,7 +19,9 @@ import java.util.List;
 
 import org.springframework.context.SmartLifecycle;
 import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.ReflectionUtils;
 
 import com.gemstone.gemfire.cache.Cache;
 import com.gemstone.gemfire.cache.util.Gateway;
@@ -91,8 +93,9 @@ public class GatewaySenderFactoryBean extends AbstractWANComponentFactoryBean<Ga
 		return (gatewaySender != null ? gatewaySender.getClass() : GatewaySender.class);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	protected void doInit() {
+	protected void doInit() throws Exception {
 		GatewaySenderFactory gatewaySenderFactory = (this.factory != null ? (GatewaySenderFactory) factory :
 			cache.createGatewaySenderFactory());
 
@@ -162,8 +165,17 @@ public class GatewaySenderFactoryBean extends AbstractWANComponentFactoryBean<Ga
 			}
 		}
 
-		GatewaySenderWrapper wrapper = new GatewaySenderWrapper(gatewaySenderFactory.create(getName(),
-			remoteDistributedSystemId));
+		GatewaySenderWrapper wrapper;
+		
+		GatewaySender gatewaySender = gatewaySenderFactory.create(getName(), remoteDistributedSystemId);
+				
+		if (ClassUtils.isPresent("com.gemstone.gemfire.cache.wan.GatewayEventSubstitutionFilter", getClass().getClassLoader())) { 			
+			wrapper = new GatewaySenderWrapper(gatewaySender);
+		} else {
+			Class<GatewaySenderWrapper> wrapperClass =
+					(Class<GatewaySenderWrapper>) getClass().getClassLoader().loadClass("org.springframework.data.gemfire8.wan.Gemfire8GatewaySenderWrapper");
+			wrapper = wrapperClass.getConstructor(GatewaySender.class).newInstance(gatewaySender);
+		}
 
         wrapper.setManualStart(manualStart);
         gatewaySender = wrapper;
